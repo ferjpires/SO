@@ -3,7 +3,7 @@
 #include <unistd.h>
 #include <lib.h>
 
-#define FIFO_PATH "/src/TUBO"
+#define FIFO_PATH "../tmp/TUBO"
 
 int main(int argc, char const *argv[])
 {
