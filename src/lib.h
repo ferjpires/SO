@@ -12,6 +12,6 @@ typedef struct
     char flag[3];
     char arguments[300];
     pid_t processID;
-} program;
+} Program;
 
 #endif
