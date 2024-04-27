@@ -21,8 +21,8 @@ int main(int argc, char const *argv[])
         }
 
         Program program;
-        // createProgram(program, argv);
-        printf("hello\n");
+        create_program(&program, argv);
+        printf("Time: %d\t Flag: %s\t Arguments: %s\n", program.time, program.flag, program.arguments);
     }
     else if (strcasecmp(argv[1], "status") == 0)
     {

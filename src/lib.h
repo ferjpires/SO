@@ -14,4 +14,6 @@ typedef struct
     pid_t processID;
 } Program;
 
+void create_program(Program *program, char const *argv[]);
+
 #endif
