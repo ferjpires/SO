@@ -1,17 +1,33 @@
 #include <stdio.h>
-#include <fcntl.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
 #include <unistd.h>
-#include <lib.h>
+#include <fcntl.h>
 
-#define FIFO_PATH "../tmp/TUBO"
+
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/time.h>
+#include <errno.h>
+#include <sys/wait.h>  // For wait function
+#include "lib.h"
 
 int main(int argc, char const *argv[])
 {
-   
-   char exec_args[20][300];
-   Program programa;
+    const char *fifoPath = "tmp/my_fifo"; // Path to the FIFO
 
-    int fd = open(FIFO_PATH, O_RDONLY);
+     // Create the FIFO
+    if (mkfifo(fifoPath, 0666) == -1) {
+        perror("mkfifo");
+        exit(EXIT_FAILURE);
+    }
+
+    char *exec_args[20]; 
+
+    Program programa;
+
+    int fd = open(fifoPath, O_RDONLY);
     if (fd == -1) {
         perror("open");
         return 1;
@@ -19,19 +35,19 @@ int main(int argc, char const *argv[])
 
     int results = open("results.txt", O_RDWR | O_CREAT | O_APPEND);
 
-    while (read(fd,&programa,sizeof(programa)) > 0)
+    while (read(fd, &programa, sizeof(programa)) > 0)
     {
-        parseArguments(programa,exec_args);
+        parseArguments(programa, exec_args);
 
         int id = fork();
 
-        if (id == 0) //Child Process
+        if (id == 0) // Child Process
         {
-            dup2(results,1);
-            execvp(1,exec_args);
+            dup2(results, 1);
+            execvp(exec_args[0], exec_args); 
             _exit(1);
         }
-        else //Parent Process
+        else // Parent Process
         {
             wait(NULL);
         }

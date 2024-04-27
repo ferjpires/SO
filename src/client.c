@@ -4,14 +4,21 @@
 #include <strings.h>
 #include <unistd.h>
 #include <fcntl.h>
+
+
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/time.h>
+#include <errno.h>
 
 #include "lib.h"
 
 int main(int argc, char const *argv[])
 {
-    //int fd = open("tmp/main_fifo", O_WRONLY);
+
+    const char *fifoPath = "tmp/my_fifo"; // Path to the FIFO
+
+    int fd = open(fifoPath, O_WRONLY);
 
     if (argc < 2)
     {
@@ -35,9 +42,7 @@ int main(int argc, char const *argv[])
         create_program(&program, argv);
         program.processID = getpid();
 
-        char output[100];
-        int tam = snprintf(output, sizeof(output), "Running process ID %d\n", program.processID);
-        write(1, output, tam);
+        write(fd,&program,sizeof(program));
 
         // i don't know what this is for ??? 
 
