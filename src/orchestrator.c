@@ -19,17 +19,20 @@ int main(int argc, char const *argv[])
 
      // Create the FIFO
     if (mkfifo(fifoPath, 0666) == -1) {
-        perror("mkfifo");
-        exit(EXIT_FAILURE);
+        if (errno != EEXIST)
+        {
+            perror("mkfifo");
+            exit(EXIT_FAILURE);
+        } 
     }
 
     char *exec_args[20]; 
-
+    
     Program programa;
 
     int fd = open(fifoPath, O_RDONLY);
     if (fd == -1) {
-        perror("open");
+        perror("Error opening");
         return 1;
     }
 
@@ -43,11 +46,16 @@ int main(int argc, char const *argv[])
         parseArguments(programa, exec_args);
 
         int id = fork();
+        if (id == -1) {
+        perror("Fork error");
+        return 1;
+    }
 
         if (id == 0) // Child Process
         {
             dup2(results, 1);
             execvp(exec_args[0], exec_args); 
+            perror("Failure\n");
             _exit(1);
         }
         else // Parent Process
