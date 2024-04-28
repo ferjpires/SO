@@ -35,8 +35,11 @@ int main(int argc, char const *argv[])
 
     int results = open("src/results.txt", O_RDWR | O_CREAT | O_APPEND);
 
-    while (read(fd, &programa, sizeof(programa)) > 0)
+    while (1)
     {
+        if (read(fd, &programa, sizeof(programa)) <= 0)
+            continue; // tive de por assim porque assim não sai do while nem continua a escrever o mesmo
+        
         parseArguments(programa, exec_args);
 
         int id = fork();

@@ -1,6 +1,6 @@
-bin
 Makefile
-obj
 README.md
+bin
+obj
 src
 tmp
