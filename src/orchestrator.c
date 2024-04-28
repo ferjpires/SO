@@ -33,7 +33,7 @@ int main(int argc, char const *argv[])
         return 1;
     }
 
-    int results = open("results.txt", O_RDWR | O_CREAT | O_APPEND);
+    int results = open("src/results.txt", O_RDWR | O_CREAT | O_APPEND);
 
     while (read(fd, &programa, sizeof(programa)) > 0)
     {

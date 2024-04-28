@@ -1,0 +1,6 @@
+bin
+Makefile
+obj
+README.md
+src
+tmp
