@@ -1,6 +1,6 @@
-Makefile
-README.md
 bin
+Makefile
 obj
+README.md
 src
 tmp
