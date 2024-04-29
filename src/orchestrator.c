@@ -5,34 +5,85 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/time.h>
 #include <errno.h>
-#include <sys/wait.h>  // For wait function
+#include <sys/wait.h> // For wait function
 #include "lib.h"
+
+int tryone(char *exec_args[], int fd2, int results)
+{
+    int status;
+    int id = fork();
+    if (id == -1)
+    {
+        perror("Fork error in orchestrator\n");
+        return 1;
+    }
+
+    if (id == 0) // Child Process
+    {
+        pid_t pid = getpid();
+        write(fd2, &pid, sizeof(int));
+        char linha[100];
+        int tam = snprintf(linha, sizeof(linha), "Process ID: %d\n", pid);
+        write(results, linha, tam);
+        dup2(results, 1);
+
+        execvp(exec_args[0], exec_args);
+        perror("Failure\n");
+        _exit(1);
+    }
+    pid_t pid = wait(&status);
+    if (WIFEXITED(status))
+    {
+        return WEXITSTATUS(status);
+    }
+    else
+    {
+        printf("son: %d died\n", pid);
+        return -1;
+    }
+}
 
 int main(int argc, char const *argv[])
 {
-    const char *fifoPath = "tmp/my_fifo"; // Path to the FIFO
+    const char *fifoPath = "tmp/my_fifo";     // Path to the FIFO
+    const char *pidFifoPath = "tmp/pid_fifo"; // Path to the process ID FIFO
 
-     // Create the FIFO
-    if (mkfifo(fifoPath, 0666) == -1) {
+    // Create the FIFO
+    if (mkfifo(fifoPath, 0666) == -1)
+    {
         if (errno != EEXIST)
         {
             perror("mkfifo");
             exit(EXIT_FAILURE);
-        } 
+        }
+    }
+    if (mkfifo(pidFifoPath, 0666) == -1)
+    {
+        if (errno != EEXIST)
+        {
+            perror("Error in creating pid Fifo Path\n");
+            exit(EXIT_FAILURE);
+        }
     }
 
-    char *exec_args[20]; 
-    
-    Program programa;
+    char *exec_args[20];
+
+    Program program;
 
     int fd = open(fifoPath, O_RDONLY);
-    if (fd == -1) {
-        perror("Error opening");
+    if (fd == -1)
+    {
+        perror("Error opening in orchestrator\n");
+        return 1;
+    }
+    int fd2 = open(pidFifoPath, O_WRONLY);
+    if (fd2 == -1)
+    {
+        perror("Error opening pid Fifo in orchestrator\n");
         return 1;
     }
 
@@ -40,29 +91,56 @@ int main(int argc, char const *argv[])
 
     while (1)
     {
-        if (read(fd, &programa, sizeof(programa)) <= 0)
+        if (read(fd, &program, sizeof(program)) <= 0)
             continue; // tive de por assim porque assim não sai do while nem continua a escrever o mesmo
-        
-        parseArguments(programa, exec_args);
 
-        int id = fork();
-        if (id == -1) {
-        perror("Fork error");
-        return 1;
-    }
+        parseArguments(program, exec_args);
+
+        struct timeval start, end;
+        long elapsed_micros;
+        gettimeofday(&start, NULL);
+
+        /* int id = fork();
+        if (id == -1)
+        {
+            perror("Fork error in orchestrator\n");
+            return 1;
+        }
 
         if (id == 0) // Child Process
         {
+            int pid = getpid();
+            write(fd2, &pid, sizeof(int));
             dup2(results, 1);
-            execvp(exec_args[0], exec_args); 
+
+            execvp(exec_args[0], exec_args);
             perror("Failure\n");
             _exit(1);
         }
-        else // Parent Process
+        pid_t pid = wait(&status);
+        if (WIFEXITED(status))
         {
-            wait(NULL);
+            return WEXITSTATUS(status);
         }
-        sleep(3);
+        else
+        {
+            printf("son: %d died\n", pid);
+            return -1;
+        } */
+        int id = fork();
+        if (id == 0)
+        {
+            tryone(exec_args, fd2, results);
+            gettimeofday(&end, NULL);
+            elapsed_micros = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_usec - start.tv_usec);
+
+            char linha[100];
+            int tam = snprintf(linha, sizeof(linha), "Tempo execução: %ld microssegundos\n", elapsed_micros);
+
+            write(results, linha, tam);
+        }
+
+        // sleep(3);
     }
 
     return 0;
