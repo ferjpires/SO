@@ -1,52 +1,8 @@
-Process ID: 29225
-Makefile
-README.md
+Process ID: 40077
 bin
+Makefile
 obj
+README.md
 src
 tmp
-Tempo execução: 2234 microssegundos
-Process ID: 31078
-Makefile
-README.md
-bin
-obj
-src
-tmp
-Tempo execução: 2396 microssegundos
-Process ID: 31101
-Makefile
-README.md
-bin
-obj
-src
-tmp
-Tempo execução: 2400 microssegundos
-Process ID: 31161
-Process ID: 31193
-Makefile
-README.md
-bin
-obj
-src
-tmp
-Tempo execução: 2405 microssegundos
-Process ID: 31218
-Makefile
-README.md
-bin
-obj
-src
-tmp
-Tempo execução: 2576 microssegundos
-Process ID: 31249
-Process ID: 31280
-Makefile
-README.md
-bin
-obj
-src
-tmp
-Tempo execução: 2525 microssegundos
-Tempo execução: 10002468 microssegundos
-Tempo execução: 10002439 microssegundos
+Tempo execução: 3692 microssegundos

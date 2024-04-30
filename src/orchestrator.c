@@ -12,13 +12,14 @@
 #include <sys/wait.h> // For wait function
 #include "lib.h"
 
-int tryone(char *exec_args[], int fd2, int results)
+int tryone(char *exec_args[], int fd2, int results,int errors)
 {
     int status;
     int id = fork();
     if (id == -1)
     {
         perror("Fork error in orchestrator\n");
+        write(errors, "Fork error in orchestrator\n", sizeof("Fork error in orchestrator\n"));
         return 1;
     }
 
@@ -33,6 +34,8 @@ int tryone(char *exec_args[], int fd2, int results)
 
         execvp(exec_args[0], exec_args);
         perror("Failure\n");
+        write(errors, "Failure\n", sizeof("Failure\n"));
+        
         _exit(1);
     }
     pid_t pid = wait(&status);
@@ -42,7 +45,9 @@ int tryone(char *exec_args[], int fd2, int results)
     }
     else
     {
-        printf("son: %d died\n", pid);
+        char buffer[50];
+        int len = sprintf(buffer, "son: %d died\n", pid);
+        write(STDOUT_FILENO, buffer, len);
         return -1;
     }
 }
@@ -52,12 +57,16 @@ int main(int argc, char const *argv[])
     const char *fifoPath = "tmp/my_fifo";     // Path to the FIFO
     const char *pidFifoPath = "tmp/pid_fifo"; // Path to the process ID FIFO
 
+    int results = open("src/results.txt", O_RDWR | O_CREAT | O_APPEND, 0666);
+    int errors = open("src/errors.txt", O_RDWR | O_CREAT | O_APPEND, 0666);
+
     // Create the FIFO
     if (mkfifo(fifoPath, 0666) == -1)
     {
         if (errno != EEXIST)
         {
             perror("mkfifo");
+            write(errors,"mkfifo\n",sizeof("mkfifo\n"));
             exit(EXIT_FAILURE);
         }
     }
@@ -66,6 +75,7 @@ int main(int argc, char const *argv[])
         if (errno != EEXIST)
         {
             perror("Error in creating pid Fifo Path\n");
+            write(errors,"Error in creating pid Fifo Path\n",sizeof("Error in creating pid Fifo Path\n"));
             exit(EXIT_FAILURE);
         }
     }
@@ -78,16 +88,16 @@ int main(int argc, char const *argv[])
     if (fd == -1)
     {
         perror("Error opening in orchestrator\n");
+        write(errors,"Error opening in orchestrator\n",sizeof("Error opening in orchestrator\n"));
         return 1;
     }
     int fd2 = open(pidFifoPath, O_WRONLY);
     if (fd2 == -1)
     {
         perror("Error opening pid Fifo in orchestrator\n");
+        write(errors,"Error opening pid Fifo in orchestrator\n",sizeof("Error opening pid Fifo in orchestrator\n"));
         return 1;
     }
-
-    int results = open("src/results.txt", O_RDWR | O_CREAT | O_APPEND, 0666);
 
     while (1)
     {
@@ -130,7 +140,7 @@ int main(int argc, char const *argv[])
         int id = fork();
         if (id == 0)
         {
-            tryone(exec_args, fd2, results);
+            tryone(exec_args, fd2, results,errors);
             gettimeofday(&end, NULL);
             elapsed_micros = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_usec - start.tv_usec);
 
