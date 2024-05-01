@@ -17,6 +17,20 @@ typedef struct
     pid_t processID;
 } Program;
 
+typedef struct
+{
+    Program items[100];
+    int front;
+    int rear;
+} Queue;
+
+typedef struct
+{
+    Program *executing;
+    Queue in_queue[100];
+    Program *finished;
+} ToUser;
+
 void create_program(Program *program, char const *argv[]);
 
 void parseArguments(Program program, char *exec_args[]);
