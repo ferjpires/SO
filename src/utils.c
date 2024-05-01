@@ -29,66 +29,43 @@ void parseArguments(Program program, char *exec_args[])
 }
 
 // Function to create a queue
-Queue *createQueue()
-{
-    Queue *queue = (Queue*)malloc(sizeof(Queue));
-    queue->front = -1; // Initializing front and rear to -1
-    queue->rear = -1;
-    return queue;
+void initQueue (Queue *q) {
+q->inicio = 0; 
+q->tamanho = 0;
 }
 
 // Function to check if the queue is empty
 int isEmpty(Queue *queue)
 {
-    if (queue->rear == -1)
-        return 1;
-    else
-        return 0;
+    return(queue->tamanho == 0);
 }
 
 // Function to check if the queue is full
 int isFull(Queue *queue)
 {
-    if (queue->rear == 99)
-        return 1;
-    else
-        return 0;
+    return (queue->tamanho == MAX);
 }
 
 // Function to add an element to the queue
 void enqueue(Queue *queue, Program value)
 {
-    if (isFull(queue))
-        printf("Queue is full\n");
+    int r =0;
+    if (queue->tamanho == MAX) r = 1;
     else
-    {
-        if (isEmpty(queue)) // If queue is empty, set front to 0
-            queue->front = 0;
-        queue->rear++;
-        queue->items[queue->rear] = value;
-    }
+    queue->values[(queue->inicio + queue->tamanho++)%MAX] = value;
+    return r ;
 }
 
 // Function to remove an element from the queue
-void dequeue(Queue *queue)
-{
-    Program item;
-    if (isEmpty(queue))
-    {
-        printf("Queue is empty\n");
-    }
-    else
-    {
-        item = queue->items[queue->front];
-        queue->front++;
-        if (queue->front > queue->rear)
-        { // If front becomes greater than rear, reset queue
-            queue->front = -1;
-            queue->rear = -1;
-        }
-    }
+int dequeue ( Queue *queue) {
+if(queue->tamanho == 0) printf("vazia\n");
+else{
+queue->inicio = (queue->inicio + 1)%MAX;
+queue->tamanho--;
+}
 }
 
+/*
 // Function to display the elements of the queue
 void display(Queue* queue) {
     int i;
@@ -103,3 +80,4 @@ void display(Queue* queue) {
         }
 }
 }
+*/

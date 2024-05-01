@@ -17,12 +17,13 @@ typedef struct
     pid_t processID;
 } Program;
 
-typedef struct
+#define MAX 100
+
+typedef struct queue 
 {
-    Program items[100];
-    int front;
-    int rear;
-} Queue;
+    Program values[MAX] ;
+    int inicio , tamanho ;
+} Queue ;
 
 typedef struct
 {
