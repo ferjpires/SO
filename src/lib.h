@@ -23,6 +23,12 @@ typedef struct
     int rear;
 } Queue;
 
+typedef struct
+{
+    Program *executing;
+    Queue in_queue[100];
+} ToUser;
+
 void create_program(Program *program, char const *argv[]);
 
 void parseArguments(Program program, char *exec_args[]);
