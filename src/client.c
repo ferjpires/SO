@@ -23,21 +23,21 @@ int main(int argc, char const *argv[])
     if (fd == -1)
     {
         perror("Error opening in client\n");
-        write(errors,"Error opening in client\n",sizeof("Error opening in client\n"));
+        write(errors, "Error opening in client\n", sizeof("Error opening in client\n"));
         return 1;
     }
     int fd2 = open(pidFifoPath, O_RDONLY);
     if (fd2 == -1)
     {
         perror("Error opening pid Fifo in client\n");
-        write(errors,"Error opening pid Fifo in client\n",sizeof("Error opening pid Fifo in client\n"));
+        write(errors, "Error opening pid Fifo in client\n", sizeof("Error opening pid Fifo in client\n"));
         return 1;
     }
 
     if (argc < 2)
     {
         perror("Número de argumentos inválido!\n");
-        write(errors,"Número de argumentos inválido!\n",sizeof("Número de argumentos inválido!\n"));
+        write(errors, "Número de argumentos inválido!\n", sizeof("Número de argumentos inválido!\n"));
         return 1;
     }
     if (strcasecmp(argv[1], "execute") == 0)
@@ -45,13 +45,13 @@ int main(int argc, char const *argv[])
         if (argc != 5)
         {
             perror("Número de argumentos inválido no execute!\n");
-            write(errors,"Número de argumentos inválido no execute!\n",sizeof("Número de argumentos inválido no execute!\n"));
+            write(errors, "Número de argumentos inválido no execute!\n", sizeof("Número de argumentos inválido no execute!\n"));
             return 1;
         }
         if (atoi(argv[2]) < 1)
         {
             perror("Tempo (ms) não pode ser inferior a 1!\n");
-            write(errors,"Tempo (ms) não pode ser inferior a 1!\n",sizeof("Tempo (ms) não pode ser inferior a 1!\n"));
+            write(errors, "Tempo (ms) não pode ser inferior a 1!\n", sizeof("Tempo (ms) não pode ser inferior a 1!\n"));
             return 1;
         }
 
@@ -69,19 +69,18 @@ int main(int argc, char const *argv[])
         if (argc != 2)
         {
             perror("Número de argumentos inválido no status!\n");
-            write(errors,"Número de argumentos inválido no status!\n",sizeof("Número de argumentos inválido no status!\n"));
+            write(errors, "Número de argumentos inválido no status!\n", sizeof("Número de argumentos inválido no status!\n"));
             return 1;
         }
         Program program;
         program.status = 1;
 
         write(fd, &program, sizeof(program));
-        
     }
     else
     {
         perror("Opção incorreta!\n");
-        write(errors,"Opção incorreta!\n",sizeof("Opção incorreta!\n"));
+        write(errors, "Opção incorreta!\n", sizeof("Opção incorreta!\n"));
         return 1;
     }
 
