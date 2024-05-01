@@ -12,7 +12,7 @@
 #include <sys/wait.h> // For wait function
 #include "lib.h"
 
-int tryone(char *exec_args[], int fd2, int results, int errors, int *procID)
+int tryone(char *exec_args[], int fd2, int results, int errors, int pipefd)
 {
     int status;
     int id = fork();
@@ -26,10 +26,9 @@ int tryone(char *exec_args[], int fd2, int results, int errors, int *procID)
     if (id == 0) // Child Process
     {
         pid_t pid = getpid();
-        *procID = pid;
+        write(pipefd, &pid, sizeof(int));
+        close(pipefd); // Close the write end of the pipe
         write(fd2, &pid, sizeof(int));
-        printf("pid: %d\n", pid);
-        
 
         dup2(results, 1);
         execvp(exec_args[0], exec_args);
@@ -121,6 +120,14 @@ int main(int argc, char const *argv[])
         return 1;
     }
 
+    // Pipe for communicating procID
+    int pipefd[2];
+    if (pipe(pipefd) == -1)
+    {
+        perror("pipe");
+        exit(EXIT_FAILURE);
+    }
+
     while (1)
     {
         if (read(fd, &program, sizeof(program)) <= 0)
@@ -137,15 +144,17 @@ int main(int argc, char const *argv[])
             int id = fork();
             if (id == 0)
             {
-                int procID = 0;
-                tryone(exec_args, fd2, results, errors, &procID);
+                pid_t procID = 0;
+                tryone(exec_args, fd2, results, errors, pipefd[1]); // Pass the write end of the pipe
+                close(pipefd[1]);                                   // Close the write end of the pipe
+                read(pipefd[0], &procID, sizeof(int));              // Read the procID from the pipe
                 gettimeofday(&end, NULL);
                 elapsed_micros = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_usec - start.tv_usec);
 
                 char linha[100];
                 int tam = snprintf(linha, sizeof(linha), "Tempo execução: %ld microssegundos\n", elapsed_micros);
                 write(results, linha, tam);
-                
+
                 tam = snprintf(linha, sizeof(linha), "Process ID: %d\n", procID);
                 write(results, linha, tam);
             }
