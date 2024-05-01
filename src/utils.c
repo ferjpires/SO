@@ -52,7 +52,7 @@ int isFull(Queue* queue) {
 }
 
 // Function to add an element to the queue
-void enqueue(Queue* queue, int value) {
+void enqueue(Queue* queue, Program value) {
     if (isFull(queue))
         printf("Queue is full\n");
     else {
