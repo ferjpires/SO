@@ -140,6 +140,8 @@ int main(int argc, char const *argv[])
         {
             if (is_there_space(&user_feedback,parallel_tasks) != (-1) && isEmpty(&(user_feedback.in_queue)))
             {
+                int pos = user_feedback.finished.tamanho;
+                user_feedback.finished.values[pos] = user_feedback.executing[is_there_space(&user_feedback,parallel_tasks)];
                 user_feedback.executing[is_there_space(&user_feedback,parallel_tasks)] = program;
 
                 parseArguments(program, exec_args);
@@ -168,6 +170,8 @@ int main(int argc, char const *argv[])
             }
             else if(is_there_space(&user_feedback,parallel_tasks) != (-1) && !isEmpty(&(user_feedback.in_queue)))
             {
+                int pos = user_feedback.finished.tamanho;
+                user_feedback.finished.values[pos] = user_feedback.executing[is_there_space(&user_feedback,parallel_tasks)];
                 enqueue(&(user_feedback.in_queue),program);
 
                 Program prog_from_queue = user_feedback.in_queue.values[user_feedback.in_queue.inicio];

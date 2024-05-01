@@ -25,11 +25,17 @@ typedef struct queue
     int inicio , tamanho ;
 } Queue ;
 
+typedef struct finished
+{
+    Program values[1000];
+    int tamanho ;
+} Finished ;
+
 typedef struct
 {
     Program *executing;
     Queue in_queue;
-    //Program *finished;
+    Finished finished;
 } ToUser;
 
 void create_program(Program *program, char const *argv[]);

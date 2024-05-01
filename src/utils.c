@@ -72,6 +72,7 @@ for (int i = 0; i < parallel; i++)
     prog.running = 0; 
     touser->executing[i] = prog;
 }
+touser->finished.tamanho = 0;
 }
 
 int is_there_space(ToUser *touser,int parallel){
