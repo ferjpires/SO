@@ -27,6 +27,7 @@ typedef struct
 {
     Program *executing;
     Queue in_queue[100];
+    Program *finished;
 } ToUser;
 
 void create_program(Program *program, char const *argv[]);
