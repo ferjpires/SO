@@ -28,12 +28,26 @@ typedef struct queue
 typedef struct
 {
     Program *executing;
-    Queue in_queue[100];
-    Program *finished;
+    Queue in_queue;
+    //Program *finished;
 } ToUser;
 
 void create_program(Program *program, char const *argv[]);
 
 void parseArguments(Program program, char *exec_args[]);
+
+void initQueue (Queue *q);
+
+int isEmpty(Queue *queue);
+
+int isFull(Queue *queue);
+
+void enqueue(Queue *queue, Program value);
+
+void dequeue (Queue *queue);
+
+void createToUser(ToUser *touser, int parallel);
+
+int is_there_space(ToUser *touser,int parallel);
 
 #endif

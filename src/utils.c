@@ -49,15 +49,13 @@ int isFull(Queue *queue)
 // Function to add an element to the queue
 void enqueue(Queue *queue, Program value)
 {
-    int r =0;
-    if (queue->tamanho == MAX) r = 1;
+    if (queue->tamanho == MAX) printf("Cheia\n");
     else
     queue->values[(queue->inicio + queue->tamanho++)%MAX] = value;
-    return r ;
 }
 
 // Function to remove an element from the queue
-int dequeue ( Queue *queue) {
+void dequeue (Queue *queue) {
 if(queue->tamanho == 0) printf("vazia\n");
 else{
 queue->inicio = (queue->inicio + 1)%MAX;
@@ -65,6 +63,24 @@ queue->tamanho--;
 }
 }
 
+void createToUser(ToUser *touser, int parallel){
+initQueue(&(touser->in_queue)); // pass the address of in_queue
+touser->executing = malloc(parallel * sizeof(Program)); 
+for (int i = 0; i < parallel; i++)
+{
+    Program prog;
+    prog.running = 0; 
+    touser->executing[i] = prog;
+}
+}
+
+int is_there_space(ToUser *touser,int parallel){
+    for (int i = 0; i < parallel; i++)
+    {
+        if(touser->executing[i].running == 0) return i;
+    }
+    return -1;
+}
 /*
 // Function to display the elements of the queue
 void display(Queue* queue) {

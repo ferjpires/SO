@@ -128,35 +128,80 @@ int main(int argc, char const *argv[])
         exit(EXIT_FAILURE);
     }
 
+    ToUser user_feedback;
+    createToUser(&user_feedback,parallel_tasks);
+
     while (1)
     {
         if (read(fd, &program, sizeof(program)) <= 0)
-            continue;
+            continue;             
 
         if (program.status == 0)
         {
-            parseArguments(program, exec_args);
-
-            struct timeval start, end;
-            long elapsed_micros;
-            gettimeofday(&start, NULL);
-
-            int id = fork();
-            if (id == 0)
+            if (is_there_space(&user_feedback,parallel_tasks) != (-1) && isEmpty(&(user_feedback.in_queue)))
             {
-                pid_t procID = 0;
-                execute_program(exec_args, fd2, results, errors, pipefd[1]); // Pass the write end of the pipe
-                close(pipefd[1]);                                   // Close the write end of the pipe
-                read(pipefd[0], &procID, sizeof(int));              // Read the procID from the pipe
-                gettimeofday(&end, NULL);
-                elapsed_micros = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_usec - start.tv_usec);
+                user_feedback.executing[is_there_space(&user_feedback,parallel_tasks)] = program;
 
-                char linha[100];
-                int tam = snprintf(linha, sizeof(linha), "Tempo execução: %ld microssegundos\n", elapsed_micros);
-                write(results, linha, tam);
+                parseArguments(program, exec_args);
 
-                tam = snprintf(linha, sizeof(linha), "Process ID: %d\n", procID);
-                write(results, linha, tam);
+                struct timeval start, end;
+                long elapsed_micros;
+                gettimeofday(&start, NULL);
+
+                int id = fork();
+                if (id == 0)
+                {
+                    pid_t procID = 0;
+                    execute_program(exec_args, fd2, results, errors, pipefd[1]); // Pass the write end of the pipe
+                    close(pipefd[1]);                                   // Close the write end of the pipe
+                    read(pipefd[0], &procID, sizeof(int));              // Read the procID from the pipe
+                    gettimeofday(&end, NULL);
+                    elapsed_micros = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_usec - start.tv_usec);
+
+                    char linha[100];
+                    int tam = snprintf(linha, sizeof(linha), "Tempo execução: %ld microssegundos\n", elapsed_micros);
+                    write(results, linha, tam);
+
+                    tam = snprintf(linha, sizeof(linha), "Process ID: %d\n", procID);
+                    write(results, linha, tam);
+                }
+            }
+            else if(is_there_space(&user_feedback,parallel_tasks) != (-1) && !isEmpty(&(user_feedback.in_queue)))
+            {
+                enqueue(&(user_feedback.in_queue),program);
+
+                Program prog_from_queue = user_feedback.in_queue.values[user_feedback.in_queue.inicio];
+                user_feedback.executing[is_there_space(&user_feedback,parallel_tasks)] = prog_from_queue;
+                
+                parseArguments(prog_from_queue, exec_args);
+
+                struct timeval start, end;
+                long elapsed_micros;
+                gettimeofday(&start, NULL);
+
+                int id = fork();
+                if (id == 0)
+                {
+                    pid_t procID = 0;
+                    execute_program(exec_args, fd2, results, errors, pipefd[1]); // Pass the write end of the pipe
+                    close(pipefd[1]);                                   // Close the write end of the pipe
+                    read(pipefd[0], &procID, sizeof(int));              // Read the procID from the pipe
+                    gettimeofday(&end, NULL);
+                    elapsed_micros = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_usec - start.tv_usec);
+
+                    char linha[100];
+                    int tam = snprintf(linha, sizeof(linha), "Tempo execução: %ld microssegundos\n", elapsed_micros);
+                    write(results, linha, tam);
+
+                    tam = snprintf(linha, sizeof(linha), "Process ID: %d\n", procID);
+                    write(results, linha, tam);
+                }
+
+                dequeue(&(user_feedback.in_queue));
+            }
+            else
+            {
+                enqueue(&(user_feedback.in_queue),program);
             }
         }
         else

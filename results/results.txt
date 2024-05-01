@@ -1,0 +1,10 @@
+bin
+Makefile
+obj
+output
+README.md
+results
+src
+tmp
+Tempo execução: 3013 microssegundos
+Process ID: 62114
