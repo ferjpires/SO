@@ -57,30 +57,26 @@ int main(int argc, char const *argv[])
 
         Program program;
         create_program(&program, argv);
-        program.processID = getpid();
 
         write(fd, &program, sizeof(program));
 
         int pid;
         if (read(fd2, &pid, sizeof(int)) > 0)
-        {
             printf("o pid é: %d\n", pid);
-        }
-
-        // i don't know what this is for ???
-
-        // struct timeval time;
-        // gettimeofday(&time, NULL);
-        // program.time_ms = time.tv_usec;
-        // program.time_s = time.tv_sec;
-        // tam = snprintf(output, sizeof(output), "#%d#%d#%d#%ld#%ld#%s#", program.processID, 0, 0, program.time_s, program.time_ms, program.arguments);
-        // write(1, output, tam); //aqui tinha fd
-
-        // printf("Time: %d\t Flag: %s\t Arguments: %s\n", program.time, program.flag, program.arguments);
     }
     else if (strcasecmp(argv[1], "status") == 0)
     {
-        printf("hello from status\n");
+        if (argc != 2)
+        {
+            perror("Número de argumentos inválido no status!\n");
+            write(errors,"Número de argumentos inválido no status!\n",sizeof("Número de argumentos inválido no status!\n"));
+            return 1;
+        }
+        Program program;
+        program.status = 1;
+
+        write(fd, &program, sizeof(program));
+        
     }
     else
     {

@@ -1,8 +1,0 @@
-Process ID: 40077
-bin
-Makefile
-obj
-README.md
-src
-tmp
-Tempo execução: 3692 microssegundos

@@ -8,6 +8,7 @@
 typedef struct
 {
     int running; // 1 for running, 0 for done
+    int status; // 1 for status, 0 for execute
     int time;
     long time_s;
     long time_ms;
