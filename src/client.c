@@ -66,17 +66,6 @@ int main(int argc, char const *argv[])
         {
             printf("o pid é: %d\n", pid);
         }
-
-        // i don't know what this is for ???
-
-        // struct timeval time;
-        // gettimeofday(&time, NULL);
-        // program.time_ms = time.tv_usec;
-        // program.time_s = time.tv_sec;
-        // tam = snprintf(output, sizeof(output), "#%d#%d#%d#%ld#%ld#%s#", program.processID, 0, 0, program.time_s, program.time_ms, program.arguments);
-        // write(1, output, tam); //aqui tinha fd
-
-        // printf("Time: %d\t Flag: %s\t Arguments: %s\n", program.time, program.flag, program.arguments);
     }
     else if (strcasecmp(argv[1], "status") == 0)
     {

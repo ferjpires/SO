@@ -30,8 +30,8 @@ int tryone(char *exec_args[], int fd2, int results,int errors)
         char linha[100];
         int tam = snprintf(linha, sizeof(linha), "Process ID: %d\n", pid);
         write(results, linha, tam);
+        
         dup2(results, 1);
-
         execvp(exec_args[0], exec_args);
         perror("Failure\n");
         write(errors, "Failure\n", sizeof("Failure\n"));
@@ -110,33 +110,6 @@ int main(int argc, char const *argv[])
         long elapsed_micros;
         gettimeofday(&start, NULL);
 
-        /* int id = fork();
-        if (id == -1)
-        {
-            perror("Fork error in orchestrator\n");
-            return 1;
-        }
-
-        if (id == 0) // Child Process
-        {
-            int pid = getpid();
-            write(fd2, &pid, sizeof(int));
-            dup2(results, 1);
-
-            execvp(exec_args[0], exec_args);
-            perror("Failure\n");
-            _exit(1);
-        }
-        pid_t pid = wait(&status);
-        if (WIFEXITED(status))
-        {
-            return WEXITSTATUS(status);
-        }
-        else
-        {
-            printf("son: %d died\n", pid);
-            return -1;
-        } */
         int id = fork();
         if (id == 0)
         {
@@ -149,8 +122,6 @@ int main(int argc, char const *argv[])
 
             write(results, linha, tam);
         }
-
-        // sleep(3);
     }
 
     return 0;
