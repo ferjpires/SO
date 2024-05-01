@@ -90,16 +90,16 @@ void dequeue(Queue *queue)
 }
 
 // Function to display the elements of the queue
-void display(Queue *queue)
-{
+void display(Queue* queue) {
     int i;
     if (isEmpty(queue))
         printf("Queue is empty\n");
-    else
-    {
+    else {
         printf("Queue elements are:\n");
         for (i = queue->front; i <= queue->rear; i++)
-            printf("%d ", queue->items[i]);
-        printf("\n");
-    }
+        {
+            printf("%d\n", queue->items[i].processID);
+            printf("%s\n", queue->items[i].arguments);
+        }
+}
 }

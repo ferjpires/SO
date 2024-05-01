@@ -12,7 +12,7 @@
 #include <sys/wait.h> // For wait function
 #include "lib.h"
 
-int tryone(char *exec_args[], int fd2, int results, int errors, int pipefd)
+int execute_program(char *exec_args[], int fd2, int results, int errors, int pipefd)
 {
     int status;
     int id = fork();
@@ -145,7 +145,7 @@ int main(int argc, char const *argv[])
             if (id == 0)
             {
                 pid_t procID = 0;
-                tryone(exec_args, fd2, results, errors, pipefd[1]); // Pass the write end of the pipe
+                execute_program(exec_args, fd2, results, errors, pipefd[1]); // Pass the write end of the pipe
                 close(pipefd[1]);                                   // Close the write end of the pipe
                 read(pipefd[0], &procID, sizeof(int));              // Read the procID from the pipe
                 gettimeofday(&end, NULL);
