@@ -158,9 +158,90 @@ void exec_normal_execute(STATUS *status, PROGRAM *program, int results, int erro
     }
 }
 
+int parse_commands(char *cmd, char *cmds[25])
+{
+    int num_cmds = 0;
+    char *token = strtok(cmd, "|");
+    while (token != NULL && num_cmds < 25)
+    {
+        cmds[num_cmds++] = token;
+        token = strtok(NULL, "|");
+    }
+    return num_cmds;
+}
+
+void execute_commands(int num_cmds, char *cmds[25], int results)
+{
+    //=======================Setting variables===================================
+    int i;
+    int num_pipes = num_cmds - 1;
+    int pipefds[2 * num_pipes];
+
+    //=======================Creating the pipes===================================
+    for (i = 0; i < num_pipes; i++)
+        if (pipe(pipefds + i * 2) == -1) { handle_error("Failed to create pipes\n"); }
+
+    //=======================Main loop for number of commands===================================
+    for (i = 0; i < num_cmds; i++)
+    {
+        //=======================Forking to execute a command===================================
+        pid_t pid = fork();
+        if (pid == -1) { handle_error("Failed to fork process in pipeline\n"); }
+
+        if (pid == 0)
+        {
+            //==========Not the first command and there's a previous pipe=================
+            if (i > 0)
+                dup2(pipefds[(i - 1) * 2], STDIN_FILENO);
+
+            //==========Not the last command and there's a next pipe=================
+            if (i < num_cmds - 1)
+                dup2(pipefds[i * 2 + 1], STDOUT_FILENO);
+            else
+                // Last command outputs to the specified file
+                dup2(results, STDOUT_FILENO);
+
+            //=======================Closing the pipes===================================
+            for (int j = 0; j < 2 * num_pipes; j++)
+                close(pipefds[j]);
+
+            //=======================Parsing arguments===================================
+            char *sub_cmds[20];
+            int k = 0;
+            char *token = strtok(cmds[i], " ");
+            while (token != NULL && k < 20) {
+                sub_cmds[k++] = token;
+                token = strtok(NULL, " ");
+            }
+            sub_cmds[k] = NULL;
+
+            //=======================Executing the command===================================
+            execvp(sub_cmds[0], sub_cmds);
+            perror("execvp");
+            _exit(1);
+        }
+    }
+
+    //=======================Parent closing the pipes===================================
+    for (i = 0; i < 2 * num_pipes; i++)
+        close(pipefds[i]);
+
+    //====================Parent waits for all child processes=============================
+    for (i = 0; i < num_cmds; i++)
+        wait(NULL);
+}
+
 void exec_pipeline_execute(STATUS *status, PROGRAM *program, int results, int errors)
 {
-    printf("hello world1\n");
+    char *cmds[25];
+    int num_cmds = parse_commands(program->arguments, cmds);
+
+    int id = fork();
+    if (id == 0)
+    {
+        execute_commands(num_cmds, cmds, results);
+        exit(1);
+    }
 }
 
 int main(int argc, char const *argv[])
@@ -193,6 +274,38 @@ int main(int argc, char const *argv[])
     //=======================Main Loop==================================
     while (1)
     {
+        if (status.queue.tamanho > 0)
+        {
+            if (can_execute(&status))
+            {
+                PROGRAM queued_program;
+                dequeue(&(status.queue), &queued_program);
+
+                if (strcasecmp(queued_program.flag, "-u") == 0)
+                {
+                    //=======================Updating executing array===================================
+                    add_program_to_executing(&status, &queued_program);
+
+                    //=======================Setting variables===================================
+                    char *exec_args[20];
+                    parseArguments(queued_program, exec_args);
+
+                    //=======================Fork for parallel execution==============================
+                    int id = fork();
+                    if (id == -1) { handle_error("Fork in normal execution, no queue\n"); }
+                    if (id == 0)
+                    {
+                        execute_program(exec_args, &queued_program, results, errors);
+                        _exit(1);
+                    }
+                }
+
+                //=======================Pipeline mode===================================
+                else
+                    exec_pipeline_execute(&status, &queued_program, results, errors);
+            }
+        }
+
         //=======================Opening FIFO===================================
         int main_fifo = open("tmp/main_fifo", O_RDONLY ); // | O_NONBLOCK
         if (main_fifo == -1) { handle_error("Error opening main_fifo in orchestrator\n"); }
