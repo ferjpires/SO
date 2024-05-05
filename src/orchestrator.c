@@ -28,8 +28,9 @@ void exec_status(STATUS status, int parallel_tasks)
         if (write(sv_to_cl_fifo, "\nScheduled:\n", strlen("\nScheduled:\n")) < 0) { handle_error("Write Scheduled failed\n"); }
         for (int i = 0; i < status.queue.tamanho; i++)
         {
+            int index = (status.queue.inicio + i) % MAX_ELEMENTS_IN_QUEUE;
             char output[500];
-            snprintf(output, sizeof(output), "Process %d, with the command: %s\n", status.queue.values[i].processID, status.queue.values[i].arguments);
+            snprintf(output, sizeof(output), "Process %d, with the command: %s\n", status.queue.values[index].processID, status.queue.values[index].arguments);
             if (write(sv_to_cl_fifo, output, strlen(output)) < 0) { handle_error("Write queued element failed\n"); }
         }
 
@@ -95,7 +96,6 @@ void execute_program(char *exec_args[], PROGRAM *program, int results, int error
     if (main_fifo == -1) { handle_error("Error opening main_fifo in orchestrator\n"); }
 
     //=======================Writing to save info on status==================================
-    //if (write(main_fifo, program, sizeof(program)) < 0) { handle_error("Write in execute program failed\n"); }
     int bytes_written = write(main_fifo, program, sizeof(PROGRAM));
     if (bytes_written != sizeof(PROGRAM)) { handle_error("Failed to write the entire program structure to FIFO"); }
     //=======================Closing FIFO==================================
@@ -110,10 +110,25 @@ void exec_normal_execute(STATUS *status, PROGRAM *program, int results, int erro
         //==================Programs in queue have priority over new======================
         if (waiting_in_queue(status))
         {
-            /*  executa o da queue
-                adiciona o novo à queue
-                retira da queue o que executou */
-                printf("waiting in queue\n");
+            enqueue(&(status->queue), *program); // adds the new
+            PROGRAM new_program;
+            dequeue(&(status->queue), &new_program); // takes the old
+
+            //=======================Updating executing array===================================
+            add_program_to_executing(status, &new_program);
+
+            //=======================Setting variables===================================
+            char *exec_args[20];
+            parseArguments(*program, exec_args);
+
+            //=======================Fork for parallel execution==============================
+            int id = fork();
+            if (id == -1) { handle_error("Fork in normal execution, no queue\n"); }
+            if (id == 0)
+            {
+                execute_program(exec_args, &new_program, results, errors);
+                _exit(1);
+            }
         }
         //=======================Normal execution===================================
         else
@@ -178,54 +193,81 @@ int main(int argc, char const *argv[])
     //=======================Main Loop==================================
     while (1)
     {
-        // if (status.queue.tamanho > 0)
-        // {
-        //     printf("reduzir a queue\n");
-        //     //status.queue.tamanho--;
-        //     continue;
-        // }   ISTO VAI SER PARA FAZER OS DA QUEUE MAYBE
-        
         //=======================Opening FIFO===================================
-        int main_fifo = open("tmp/main_fifo", O_RDONLY );
+        int main_fifo = open("tmp/main_fifo", O_RDONLY | O_NONBLOCK);
         if (main_fifo == -1) { handle_error("Error opening main_fifo in orchestrator\n"); }
 
         PROGRAM program;
         //=======================Reading data from client=========================
-        //if (read(main_fifo, &program, sizeof(program)) <= 0) { continue; }
-        int bytes_read = read(main_fifo, &program, sizeof(PROGRAM));
-        if (bytes_read != sizeof(PROGRAM)) { handle_error("Failed to read the entire program structure from FIFO\n"); }
+        int bytes_read = read(main_fifo, &program, sizeof(PROGRAM));  
+        if (bytes_read == -1) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                // No data available, continue the loop
+            } else {
+                perror("Read error");
+            }
+        } 
+        else if (bytes_read == sizeof(PROGRAM))
+        {
+            //=======================Status mode===================================
+            if (program.status == 1)
+            {
+                //STATUS copy = status;
+                exec_status(status, parallel_tasks);
+                continue;
+            }
+                
+            //==================Checking if program already finished======================
+            if (program.running == 2)
+            {
+                add_program_to_finished(&status, &program);
+                continue;
+            }
+
+            //=======================Execute mode===================================
+
+            //=======================Normal mode===================================
+            if (strcasecmp(program.flag, "-u") == 0)
+                exec_normal_execute(&status, &program, results, errors);
+
+            //=======================Pipeline mode===================================
+            else
+                exec_pipeline_execute(&status, &program, results, errors);
+            }
+
+            if (status.queue.tamanho > 0)
+            {
+                if (can_execute(&status)){
+                    PROGRAM queued_program;
+                    dequeue(&(status.queue), &queued_program);
+
+                    if (strcasecmp(queued_program.flag, "-u") == 0)
+                    {
+                        //=======================Updating executing array===================================
+                        add_program_to_executing(&status, &queued_program);
+
+                        //=======================Setting variables===================================
+                        char *exec_args[20];
+                        parseArguments(queued_program, exec_args);
+
+                        //=======================Fork for parallel execution==============================
+                        int id = fork();
+                        if (id == -1) { handle_error("Fork in normal execution, no queue\n"); }
+                        if (id == 0)
+                        {
+                            execute_program(exec_args, &queued_program, results, errors);
+                            _exit(1);
+                        }
+                    }
+
+                    //=======================Pipeline mode===================================
+                    else
+                        exec_pipeline_execute(&status, &queued_program, results, errors);
+                }
+            }
+
         //=======================Closing FIFO===================================
         close(main_fifo);
-        printf("here: %ld and %did: %d\n", program.time, program.running, program.processID);
-
-        //=======================Status mode===================================
-        if (program.status == 1)
-        {
-            //STATUS copy = status;
-            exec_status(status, parallel_tasks);
-            continue;
-        }
-            
-        //==================Checking if program already finished======================
-        if (program.running == 2)
-        {
-            add_program_to_finished(&status, &program);
-            continue;
-        }
-
-        //=======================Execute mode===================================
-
-        //=======================Normal mode===================================
-        if (strcasecmp(program.flag, "-u") == 0)
-            exec_normal_execute(&status, &program, results, errors);
-
-        //=======================Pipeline mode===================================
-        else
-            exec_pipeline_execute(&status, &program, results, errors);
-
-        // verificar se há programas a espera na queue e executar
-        // se puder executar, faz dequeue e faz o execute
-        if (bytes_read < 0) printf("hello\n");
     }
 
     return 0;
