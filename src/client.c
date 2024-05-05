@@ -8,81 +8,100 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/time.h>
+#include <sys/wait.h>
 #include <errno.h>
 
 #include "lib.h"
 
+void handle_status()
+{
+    //=======================Creating FIFO===================================
+    if (mkfifo("tmp/sv_to_cl_fifo", 0666) == -1) { if (errno != EEXIST) { handle_error("Couldn't create sv_to_cl FIFO\n"); } }
+    
+    //=======================Opening FIFO===================================
+    int sv_to_cl_fifo = open("tmp/sv_to_cl_fifo", O_RDONLY);
+    if (sv_to_cl_fifo == -1) { handle_error("Error opening sv_to_cl_fifo in client\n"); }
+
+    //=======================Setting variables==================================
+    char buffer[500];
+    ssize_t bytes_read;
+
+    //=======================Writing to user==================================
+    while ((bytes_read = read(sv_to_cl_fifo, buffer, sizeof(buffer))) > 0)
+        write(STDOUT_FILENO, buffer, bytes_read);
+
+    //=======================Closing FIFO===================================
+    close(sv_to_cl_fifo);
+    unlink("tmp/sv_to_cl_fifo");
+}
+
+void status_mode(int argc)
+{
+    //=======================Opening FIFO===================================
+    int main_fifo = open("tmp/main_fifo", O_WRONLY);
+    if (main_fifo == -1) { handle_error("Error opening main_fifo in client\n"); }
+
+    //=======================Checking conditions==================================
+    if (argc != 2) { handle_error("Invalid number of arguments in status\n"); }
+
+    //=======================Setting variables==================================
+    PROGRAM program;
+    program.status = 1;
+    program.processID = getpid();
+    program.running = 0;
+    strcpy(program.flag, "");
+    strcpy(program.arguments,"");
+
+    //=======================Writing to server==================================
+    write(main_fifo, &program, sizeof(PROGRAM));
+
+    //=======================Closing FIFO========================================
+    close(main_fifo);
+
+    //=======================Handling server feedback==================================
+    handle_status();
+}
+
+void execute_mode(int argc, char const *argv[])
+{
+    //=======================Opening FIFO===================================
+    int main_fifo = open("tmp/main_fifo", O_WRONLY);
+    if (main_fifo == -1) { handle_error("Error opening main_fifo in client\n"); }
+
+    //=======================Checking conditions==================================
+    if (argc != 5) { handle_error("Invalid number of arguments in execute\n"); }
+    if (atoi(argv[2]) < 1) { handle_error("Time (ms) can't be less than 1\n"); }
+
+    //=======================Setting variables==================================
+    PROGRAM program;
+    int pid = getpid();
+    create_program(&program, argv, pid);
+
+    //=======================Writing to user==================================
+    char output[100];
+    snprintf(output, sizeof(output), "Process %d has just started\n", program.processID);
+    write(STDOUT_FILENO, output, strlen(output));
+
+    //=======================Writing to server==================================
+    write(main_fifo, &program, sizeof(PROGRAM));
+
+    //=======================Closing FIFO===================================
+    close(main_fifo);
+
+}
+
 int main(int argc, char const *argv[])
 {
+    //=======================Checking conditions==================================
+    if (argc < 2) { handle_error("Invalid number of arguments\n"); }
 
-    const char *fifoPath = "tmp/my_fifo";     // Path to the FIFO
-    const char *pidFifoPath = "tmp/pid_fifo"; // Path to the process ID FIFO
-    int errors = open("src/errors.txt", O_RDWR | O_CREAT | O_APPEND, 0666);
-
-    int fd = open(fifoPath, O_WRONLY);
-    if (fd == -1)
-    {
-        perror("Error opening in client\n");
-        write(errors, "Error opening in client\n", sizeof("Error opening in client\n"));
-        return 1;
-    }
-    int fd2 = open(pidFifoPath, O_RDONLY);
-    if (fd2 == -1)
-    {
-        perror("Error opening pid Fifo in client\n");
-        write(errors, "Error opening pid Fifo in client\n", sizeof("Error opening pid Fifo in client\n"));
-        return 1;
-    }
-
-    if (argc < 2)
-    {
-        perror("Número de argumentos inválido!\n");
-        write(errors, "Número de argumentos inválido!\n", sizeof("Número de argumentos inválido!\n"));
-        return 1;
-    }
+    //=======================Execute mode===================================
     if (strcasecmp(argv[1], "execute") == 0)
-    {
-        if (argc != 5)
-        {
-            perror("Número de argumentos inválido no execute!\n");
-            write(errors, "Número de argumentos inválido no execute!\n", sizeof("Número de argumentos inválido no execute!\n"));
-            return 1;
-        }
-        if (atoi(argv[2]) < 1)
-        {
-            perror("Tempo (ms) não pode ser inferior a 1!\n");
-            write(errors, "Tempo (ms) não pode ser inferior a 1!\n", sizeof("Tempo (ms) não pode ser inferior a 1!\n"));
-            return 1;
-        }
+        execute_mode(argc, argv);
 
-        Program program;
-        create_program(&program, argv);
-
-        write(fd, &program, sizeof(program));
-
-        int pid;
-        if (read(fd2, &pid, sizeof(int)) > 0)
-            printf("o pid é: %d\n", pid);
-    }
+    //=======================Status mode===================================
     else if (strcasecmp(argv[1], "status") == 0)
-    {
-        if (argc != 2)
-        {
-            perror("Número de argumentos inválido no status!\n");
-            write(errors, "Número de argumentos inválido no status!\n", sizeof("Número de argumentos inválido no status!\n"));
-            return 1;
-        }
-        Program program;
-        program.status = 1;
-
-        write(fd, &program, sizeof(program));
-    }
-    else
-    {
-        perror("Opção incorreta!\n");
-        write(errors, "Opção incorreta!\n", sizeof("Opção incorreta!\n"));
-        return 1;
-    }
+        status_mode(argc);
 
     return 0;
 }

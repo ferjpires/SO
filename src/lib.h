@@ -1,59 +1,65 @@
 #ifndef LIB_H
 #define LIB_H
 
-#include <unistd.h>
-#include <sys/types.h>
-#include <fcntl.h>
+#define MAX_ELEMENTS_IN_QUEUE 100
+#define MAX_ARGUMENTS_SIZE 300
+#define MAX_FINISHED_PROGRAMS 200
+#define MAX_FLAG_SIZE 3
 
 typedef struct
 {
-    int running; // 1 for running, 0 for done
-    int status; // 1 for status, 0 for execute
-    int time;
-    long time_s;
-    long time_ms;
-    char flag[3];
-    char arguments[300];
-    pid_t processID;
-} Program;
-
-#define MAX 100
-
-typedef struct queue 
-{
-    Program values[MAX] ;
-    int inicio , tamanho ;
-} Queue ;
-
-typedef struct finished
-{
-    Program values[1000];
-    int tamanho ;
-} Finished ;
+    int running; // 2 for done, 1 for running, 0 for waiting
+    int status;  // 1 for status, 0 for execute
+    int expected_time;
+    long time;
+    char flag[MAX_FLAG_SIZE];
+    char arguments[MAX_ARGUMENTS_SIZE];
+    int processID;
+} PROGRAM;
 
 typedef struct
 {
-    Program *executing;
-    Queue in_queue;
-    Finished finished;
-} ToUser;
+    PROGRAM values[MAX_ELEMENTS_IN_QUEUE];
+    int inicio;
+    int tamanho;
+} QUEUE;
 
-void create_program(Program *program, char const *argv[]);
+typedef struct
+{
+    PROGRAM values[MAX_FINISHED_PROGRAMS];
+    int tamanho;
+} FINISHED;
 
-void parseArguments(Program program, char *exec_args[]);
+typedef struct
+{
+    int current_executing;
+    int max_executing;
+    PROGRAM *executing;
+    QUEUE queue;
+    FINISHED finished;
+} STATUS;
 
-void initQueue (Queue *q);
 
-int isEmpty(Queue *queue);
+void handle_error(char *message);
 
-int isFull(Queue *queue);
+void create_program(PROGRAM *program, char const *argv[], int pid);
 
-void enqueue(Queue *queue, Program value);
+void create_status(STATUS *status, int parallel_tasks);
 
-void dequeue (Queue *queue);
+int can_execute(STATUS *status);
 
-void createToUser(ToUser *touser, int parallel);
+int waiting_in_queue(STATUS *status);
 
-int is_there_space(ToUser *touser,int parallel);
+int add_program_to_queue(STATUS *status, PROGRAM *program);
+
+int enqueue(QUEUE *queue, PROGRAM value);
+
+int dequeue(QUEUE *queue, PROGRAM *program);
+
+void add_program_to_executing(STATUS *status, PROGRAM *program);
+
+void add_program_to_finished(STATUS *status, PROGRAM *program);
+
+void parseArguments(PROGRAM program, char *exec_args[]);
 
 #endif
