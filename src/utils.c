@@ -49,7 +49,6 @@ int can_execute(STATUS *status)
 
 int waiting_in_queue(STATUS *status)
 {
-    printf("perguntou?\n");
     if (status->queue.tamanho > 0)
         return 1;
     return 0;

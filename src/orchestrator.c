@@ -160,7 +160,7 @@ void exec_normal_execute(STATUS *status, PROGRAM *program, int results, int erro
 
 void exec_pipeline_execute(STATUS *status, PROGRAM *program, int results, int errors)
 {
-    printf("hello world\n");
+    printf("hello world1\n");
 }
 
 int main(int argc, char const *argv[])
@@ -194,7 +194,7 @@ int main(int argc, char const *argv[])
     while (1)
     {
         //=======================Opening FIFO===================================
-        int main_fifo = open("tmp/main_fifo", O_RDONLY | O_NONBLOCK);
+        int main_fifo = open("tmp/main_fifo", O_RDONLY ); // | O_NONBLOCK
         if (main_fifo == -1) { handle_error("Error opening main_fifo in orchestrator\n"); }
 
         PROGRAM program;
@@ -235,36 +235,36 @@ int main(int argc, char const *argv[])
                 exec_pipeline_execute(&status, &program, results, errors);
             }
 
-            if (status.queue.tamanho > 0)
-            {
-                if (can_execute(&status)){
-                    PROGRAM queued_program;
-                    dequeue(&(status.queue), &queued_program);
+            // if (status.queue.tamanho > 0)
+            // {
+            //     if (can_execute(&status)){
+            //         PROGRAM queued_program;
+            //         dequeue(&(status.queue), &queued_program);
 
-                    if (strcasecmp(queued_program.flag, "-u") == 0)
-                    {
-                        //=======================Updating executing array===================================
-                        add_program_to_executing(&status, &queued_program);
+            //         if (strcasecmp(queued_program.flag, "-u") == 0)
+            //         {
+            //             //=======================Updating executing array===================================
+            //             add_program_to_executing(&status, &queued_program);
 
-                        //=======================Setting variables===================================
-                        char *exec_args[20];
-                        parseArguments(queued_program, exec_args);
+            //             //=======================Setting variables===================================
+            //             char *exec_args[20];
+            //             parseArguments(queued_program, exec_args);
 
-                        //=======================Fork for parallel execution==============================
-                        int id = fork();
-                        if (id == -1) { handle_error("Fork in normal execution, no queue\n"); }
-                        if (id == 0)
-                        {
-                            execute_program(exec_args, &queued_program, results, errors);
-                            _exit(1);
-                        }
-                    }
+            //             //=======================Fork for parallel execution==============================
+            //             int id = fork();
+            //             if (id == -1) { handle_error("Fork in normal execution, no queue\n"); }
+            //             if (id == 0)
+            //             {
+            //                 execute_program(exec_args, &queued_program, results, errors);
+            //                 _exit(1);
+            //             }
+            //         }
 
-                    //=======================Pipeline mode===================================
-                    else
-                        exec_pipeline_execute(&status, &queued_program, results, errors);
-                }
-            }
+            //         //=======================Pipeline mode===================================
+            //         else
+            //             exec_pipeline_execute(&status, &queued_program, results, errors);
+            //     }
+            // }
 
         //=======================Closing FIFO===================================
         close(main_fifo);
