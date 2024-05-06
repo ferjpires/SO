@@ -154,7 +154,7 @@ void exec_normal_execute(STATUS *status, PROGRAM *program, int results, int erro
     {
         //=======================Executing array full===================================
         if (add_program_to_queue(status, program) != 1) { handle_error("Queue Full\n"); }
-        printf("adicionou\n");
+        //printf("adicionou\n");
     }
 }
 
@@ -170,17 +170,18 @@ int parse_commands(char *cmd, char *cmds[25])
     return num_cmds;
 }
 
-void execute_commands(int num_cmds, char *cmds[25], int results)
+void execute_commands(PROGRAM *program,int num_cmds, char *cmds[25], int results)
 {
     //=======================Setting variables===================================
     int i;
     int num_pipes = num_cmds - 1;
     int pipefds[2 * num_pipes];
+    struct timeval start, end;
+    gettimeofday(&start, NULL);
 
     //=======================Creating the pipes===================================
     for (i = 0; i < num_pipes; i++)
         if (pipe(pipefds + i * 2) == -1) { handle_error("Failed to create pipes\n"); }
-
     //=======================Main loop for number of commands===================================
     for (i = 0; i < num_cmds; i++)
     {
@@ -220,27 +221,92 @@ void execute_commands(int num_cmds, char *cmds[25], int results)
             perror("execvp");
             _exit(1);
         }
-    }
+    }    
+        //=======================Parent closing the pipes===================================
+        for (i = 0; i < 2 * num_pipes; i++)
+            close(pipefds[i]);
 
-    //=======================Parent closing the pipes===================================
-    for (i = 0; i < 2 * num_pipes; i++)
-        close(pipefds[i]);
+        //====================Parent waits for all child processes=============================
+        for (i = 0; i < num_cmds; i++)
+            wait(NULL);
 
-    //====================Parent waits for all child processes=============================
-    for (i = 0; i < num_cmds; i++)
-        wait(NULL);
+        //=======================Setting information on the program==================================
+        gettimeofday(&end, NULL);
+        long seconds = end.tv_sec - start.tv_sec;
+        long microseconds = end.tv_usec - start.tv_usec;
+        long milliseconds = (seconds * 1000) + (microseconds / 1000);
+        program->time = milliseconds;
+        program->running = 2; // done
+
+        //=======================Writing results output==================================
+        char output[100];
+        snprintf(output, sizeof(output), "Process %d, with time execution of %ld ms\n", program->processID, program->time);
+        if (write(results, output, strlen(output)) < 0) { handle_error("Write to results failed\n"); }
+
+        //=======================Opening FIFO==================================
+        int main_fifo = open("tmp/main_fifo", O_WRONLY);
+        if (main_fifo == -1) { handle_error("Error opening main_fifo in orchestrator\n"); }
+
+        //=======================Writing to save info on status==================================
+        int bytes_written = write(main_fifo, program, sizeof(PROGRAM));
+        if (bytes_written != sizeof(PROGRAM)) { handle_error("Failed to write the entire program structure to FIFO"); }
+        //=======================Closing FIFO==================================
+        close(main_fifo);   
 }
 
 void exec_pipeline_execute(STATUS *status, PROGRAM *program, int results, int errors)
 {
-    char *cmds[25];
-    int num_cmds = parse_commands(program->arguments, cmds);
-
-    int id = fork();
-    if (id == 0)
+     //=======================Executing array not full===================================
+    if (can_execute(status))
     {
-        execute_commands(num_cmds, cmds, results);
-        exit(1);
+        //==================Programs in queue have priority over new======================
+        if (waiting_in_queue(status))
+        {
+            enqueue(&(status->queue), *program); // adds the new
+            PROGRAM new_program;
+            dequeue(&(status->queue), &new_program); // takes the old
+
+            //=======================Updating executing array===================================
+            add_program_to_executing(status, &new_program);
+
+            //=======================Setting variables===================================
+            char *cmds[25];
+            int num_cmds = parse_commands(program->arguments, cmds);
+
+            //=======================Fork for parallel execution==============================
+            int id = fork();
+            if (id == -1) { handle_error("Fork in normal execution, no queue\n"); }
+            if (id == 0)
+            {
+            execute_commands(program,num_cmds, cmds, results);
+            exit(1);
+            }
+        }
+        //=======================Normal execution===================================
+        else
+        {
+            //=======================Updating executing array===================================
+            add_program_to_executing(status, program);
+
+            //=======================Setting variables===================================
+            char *cmds[25];
+            int num_cmds = parse_commands(program->arguments, cmds);
+
+
+            //=======================Fork for parallel execution==============================
+            int id = fork();
+            if (id == -1) { handle_error("Fork in normal execution, no queue\n"); }
+            if (id == 0)
+            {
+            execute_commands(program , num_cmds, cmds, results);
+            exit(1);
+            }
+        }
+    }
+    else
+    {
+        //=======================Executing array full===================================
+        if (add_program_to_queue(status, program) != 1) { handle_error("Queue Full\n"); }
     }
 }
 
@@ -302,7 +368,23 @@ int main(int argc, char const *argv[])
 
                 //=======================Pipeline mode===================================
                 else
-                    exec_pipeline_execute(&status, &queued_program, results, errors);
+                    {
+                    //=======================Updating executing array===================================
+                    add_program_to_executing(&status, &queued_program);
+
+                    //=======================Setting variables===================================
+                    char *exec_args[20];
+                    parseArguments(queued_program, exec_args);
+
+                    //=======================Fork for parallel execution==============================
+                    int id = fork();
+                    if (id == -1) {handle_error("Fork in normal execution, no queue\n");}
+                    if (id == 0)
+                    {
+                        exec_pipeline_execute(&status, &queued_program, results, errors);
+                        _exit(1);
+                    }
+                    }  
             }
         }
 
