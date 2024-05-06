@@ -60,6 +60,23 @@ int add_program_to_queue(STATUS *status, PROGRAM *program)
     return(enqueue(&(status->queue), *program));
 }
 
+PROGRAM* find_fastest_program_queue(QUEUE *queue) {
+    if (queue->tamanho == 0) {
+        return NULL; // Queue is empty
+    }
+
+    PROGRAM *fastest = &(queue->values[queue->inicio]);
+    int i;
+    for (i = 1; i < queue->tamanho; i++) {
+        PROGRAM *current_program = &(queue->values[(queue->inicio + i) % MAX_ELEMENTS_IN_QUEUE]);
+        if (current_program->expected_time < fastest->expected_time) {
+            fastest = current_program;
+        }
+    }
+
+    return fastest;
+}
+
 // Function to add an element to the queue
 // 1 if success, 0 if not
 int enqueue(QUEUE *queue, PROGRAM value)
@@ -81,6 +98,32 @@ int dequeue(QUEUE *queue, PROGRAM *program)
     queue->inicio = (queue->inicio + 1) % MAX_ELEMENTS_IN_QUEUE;
     queue->tamanho--;
     return 1;
+}
+
+int dequeue_fastest_program(QUEUE *queue, PROGRAM *program) {
+    if (queue->tamanho == 0) {
+        return 0;
+    }
+
+    PROGRAM *fastest = find_fastest_program_queue(queue);
+
+    *program = *fastest;
+
+    int i, found_index = -1;
+    for (i = 0; i < queue->tamanho; i++) {
+        if (&(queue->values[(queue->inicio + i) % MAX_ELEMENTS_IN_QUEUE]) == fastest) {
+            found_index = i;
+            break;
+        }
+    }
+
+    for (i = found_index; i < queue->tamanho - 1; i++) {
+        queue->values[(queue->inicio + i) % MAX_ELEMENTS_IN_QUEUE] = queue->values[(queue->inicio + i + 1) % MAX_ELEMENTS_IN_QUEUE];
+    }
+
+    queue->tamanho--;
+
+    return 1; 
 }
 
 void add_program_to_executing(STATUS *status, PROGRAM *program)

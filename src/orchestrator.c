@@ -230,6 +230,7 @@ void execute_commands(PROGRAM *program,int num_cmds, char *cmds[25], int results
         for (i = 0; i < num_cmds; i++)
             wait(NULL);
 
+        wait(NULL);
         //=======================Setting information on the program==================================
         gettimeofday(&end, NULL);
         long seconds = end.tv_sec - start.tv_sec;
@@ -313,12 +314,14 @@ void exec_pipeline_execute(STATUS *status, PROGRAM *program, int results, int er
 int main(int argc, char const *argv[])
 {
     //=======================Checking conditions==================================
-    if (argc != 3) { handle_error("Wrong number of arguments\n"); }
+    if (argc != 4) { handle_error("Wrong number of arguments\n"); }
     if (atoi(argv[2]) < 1) { handle_error("Parallel tasks can't be less than 1!\n"); }
+    if (atoi(argv[3]) > 1 || atoi(argv[3]) < 0) { handle_error("There are only politic 0 and 1\n"); }
 
     //=======================Setting variables==================================
     char *output_folder = strdup(argv[1]);
     int parallel_tasks = atoi(argv[2]);
+    int politics = atoi(argv[3]); 
     char results_path[100];
     char errors_path[100];
     snprintf(results_path, sizeof(results_path), "%s/%s", output_folder, "/results.txt");
@@ -345,7 +348,9 @@ int main(int argc, char const *argv[])
             if (can_execute(&status))
             {
                 PROGRAM queued_program;
+                if(politics == 0)
                 dequeue(&(status.queue), &queued_program);
+                else dequeue_fastest_program(&(status.queue), &queued_program);
 
                 if (strcasecmp(queued_program.flag, "-u") == 0)
                 {
@@ -367,24 +372,24 @@ int main(int argc, char const *argv[])
                 }
 
                 //=======================Pipeline mode===================================
-                else
-                    {
+                else{
                     //=======================Updating executing array===================================
-                    add_program_to_executing(&status, &queued_program);
+                     add_program_to_executing(&status, &queued_program);
 
                     //=======================Setting variables===================================
-                    char *exec_args[20];
-                    parseArguments(queued_program, exec_args);
+                    char *cmds[25];
+                    int num_cmds = parse_commands(queued_program.arguments, cmds);
+
 
                     //=======================Fork for parallel execution==============================
                     int id = fork();
-                    if (id == -1) {handle_error("Fork in normal execution, no queue\n");}
+                    if (id == -1) { handle_error("Fork in normal execution, no queue\n"); }
                     if (id == 0)
                     {
-                        exec_pipeline_execute(&status, &queued_program, results, errors);
-                        _exit(1);
+                    execute_commands(&queued_program , num_cmds, cmds, results);
+                    exit(1);
                     }
-                    }  
+                }  
             }
         }
 
