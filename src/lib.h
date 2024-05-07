@@ -63,6 +63,8 @@ void add_program_to_finished(STATUS *status, PROGRAM *program);
 
 void parseArguments(PROGRAM program, char *exec_args[]);
 
+int parse_commands(char *cmd, char *cmds[25]);
+
 int dequeue_fastest_program(QUEUE *queue, PROGRAM *program);
 
 PROGRAM* find_fastest_program_queue(QUEUE *queue);

@@ -176,3 +176,15 @@ void parseArguments(PROGRAM program, char *exec_args[])
     }
     exec_args[i] = NULL;
 }
+
+int parse_commands(char *cmd, char *cmds[25])
+{
+    int num_cmds = 0;
+    char *token = strtok(cmd, "|");
+    while (token != NULL && num_cmds < 25)
+    {
+        cmds[num_cmds++] = token;
+        token = strtok(NULL, "|");
+    }
+    return num_cmds;
+}
