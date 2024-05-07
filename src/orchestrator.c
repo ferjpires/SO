@@ -51,7 +51,17 @@ void exec_status(STATUS status, int parallel_tasks)
             snprintf(output, sizeof(output), "Process %d, executed in %ld ms, with the command: %s\n", status.finished.values[i].processID, status.finished.values[i].time, status.finished.values[i].arguments);
             if (write(sv_to_cl_fifo, output, strlen(output)) < 0) { handle_error("Write completed element failed\n"); }
         }
-        
+
+        //=======================Passing completed processes==================================
+        if (write(sv_to_cl_fifo, "\nTime so far:\n", strlen("\nTime so far:\n")) < 0) { handle_error("Write Completed failed\n"); }
+        struct timeval end;
+        gettimeofday(&end, NULL);
+        long milliseconds = (end.tv_sec * 1000) + (end.tv_usec / 1000);
+        long timePassed = milliseconds - status.start_time;
+        char output[500];
+        snprintf(output, sizeof(output), "%ld ms\n", timePassed);
+        if (write(sv_to_cl_fifo, output, strlen(output)) < 0) { handle_error("Write completed element failed\n"); }
+
         //=======================Closing FIFO==================================
         close(sv_to_cl_fifo);
         _exit(1);

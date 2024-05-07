@@ -32,6 +32,10 @@ void create_program(PROGRAM *program, char const *argv[], int pid)
 
 void create_status(STATUS *status, int parallel_tasks)
 {
+    struct timeval start;
+    gettimeofday(&start, NULL);
+    long milliseconds = (start.tv_sec * 1000) + (start.tv_usec / 1000);
+    status->start_time = milliseconds;
     status->executing = malloc(parallel_tasks * sizeof(PROGRAM));
     status->current_executing = 0;
     status->max_executing = parallel_tasks;

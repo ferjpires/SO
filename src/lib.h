@@ -34,6 +34,7 @@ typedef struct
 {
     int current_executing;
     int max_executing;
+    long start_time;
     PROGRAM *executing;
     QUEUE queue;
     FINISHED finished;
